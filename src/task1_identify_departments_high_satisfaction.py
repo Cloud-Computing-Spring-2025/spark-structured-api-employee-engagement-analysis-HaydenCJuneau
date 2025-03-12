@@ -12,6 +12,7 @@ def initialize_spark(app_name="Task1_Identify_Departments"):
         .getOrCreate()
     return spark
 
+
 def load_data(spark, file_path):
     """
     Load the employee data from a CSV file into a Spark DataFrame.
@@ -28,7 +29,8 @@ def load_data(spark, file_path):
     df = spark.read.csv(file_path, header=True, schema=schema)
     return df
 
-def identify_departments_high_satisfaction(df):
+
+def identify_departments_high_satisfaction(df, spark):
     """
     Identify departments with more than 50% of employees having a Satisfaction Rating > 4 and Engagement Level 'High'.
 
@@ -38,14 +40,19 @@ def identify_departments_high_satisfaction(df):
     Returns:
         DataFrame: DataFrame containing departments meeting the criteria with their respective percentages.
     """
-    # TODO: Implement Task 1
-    # Steps:
-    # 1. Filter employees with SatisfactionRating > 4 and EngagementLevel == 'High'.
-    # 2. Calculate the percentage of such employees within each department.
-    # 3. Identify departments where this percentage exceeds 50%.
-    # 4. Return the result DataFrame.
+    filtered = df.filter((df.SatisfactionRating > 4) &
+                         (df.EngagementLevel == "High"))
 
-    pass  # Remove this line after implementing the function
+    total_counts = df.groupby("Department").count().withColumnRenamed("count", "total_count")
+    satisfied_counts = filtered.groupby("Department").count().withColumnRenamed("count", "satisfied_count")
+
+    result = satisfied_counts.join(total_counts, "Department")
+
+    result = result.withColumn("Percentage", (col("satisfied_count") / col("total_count")) * 100)
+    result = result.filter(col("Percentage") > 50).select("Department", "Percentage")
+    
+    return result
+
 
 def write_output(result_df, output_path):
     """
@@ -68,14 +75,14 @@ def main():
     spark = initialize_spark()
     
     # Define file paths
-    input_file = "/workspaces/Employee_Engagement_Analysis_Spark/input/employee_data.csv"
-    output_file = "/workspaces/Employee_Engagement_Analysis_Spark/outputs/task1/departments_high_satisfaction.csv"
+    input_file = "/opt/bitnami/spark/Employee/input/employee_data.csv"
+    output_file = "/opt/bitnami/spark/Employee/outputs/task1/departments_high_satisfaction.csv"
     
     # Load data
     df = load_data(spark, input_file)
     
     # Perform Task 1
-    result_df = identify_departments_high_satisfaction(df)
+    result_df = identify_departments_high_satisfaction(df, spark)
     
     # Write the result to CSV
     write_output(result_df, output_file)
