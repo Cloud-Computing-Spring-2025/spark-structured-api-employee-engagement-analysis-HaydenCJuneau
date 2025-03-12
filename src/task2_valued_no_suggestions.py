@@ -1,7 +1,7 @@
 # task2_valued_no_suggestions.py
 
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, count
+from pyspark.sql.functions import col, count, lit
 
 def initialize_spark(app_name="Task2_Valued_No_Suggestions"):
     """
@@ -28,6 +28,7 @@ def load_data(spark, file_path):
     df = spark.read.csv(file_path, header=True, schema=schema)
     return df
 
+
 def identify_valued_no_suggestions(df):
     """
     Find employees who feel valued but have not provided suggestions and calculate their proportion.
@@ -45,7 +46,14 @@ def identify_valued_no_suggestions(df):
     # 3. Calculate the number and proportion of these employees.
     # 4. Return the results.
 
-    pass  # Remove this line after implementing the function
+    filtered_count = df.filter((df.SatisfactionRating >= 4) &
+                         (df.ProvidedSuggestions == lit(False))).count()
+
+    total_count = df.count()
+    proportion = (filtered_count / df.count()) * 100 if total_count > 0 else 0
+
+    return filtered_count, proportion
+
 
 def write_output(number, proportion, output_path):
     """
@@ -71,8 +79,8 @@ def main():
     spark = initialize_spark()
     
     # Define file paths
-    input_file = "/workspaces/Employee_Engagement_Analysis_Spark/input/employee_data.csv"
-    output_file = "/workspaces/Employee_Engagement_Analysis_Spark/outputs/task2/valued_no_suggestions.txt"
+    input_file = "/opt/bitnami/spark/Employee/input/employee_data.csv"
+    output_file = "/opt/bitnami/spark/Employee/outputs/task2/valued_no_suggestions.txt"
     
     # Load data
     df = load_data(spark, input_file)
